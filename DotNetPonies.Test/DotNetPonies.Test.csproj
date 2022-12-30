@@ -19,4 +19,10 @@
     <ProjectReference Include="..\DotNetPonies\DotNetPonies.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update=".secret.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
