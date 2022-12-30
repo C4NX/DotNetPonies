@@ -70,9 +70,18 @@ namespace DotNetPonies
             }
         }
 
-        public PonyTownClient LoginWithCookie(string connect_sid)
+        /// <summary>
+        /// Login to pony town with a cookie, be careful, it will probably not last long until it expires.
+        /// </summary>
+        /// <param name="connect_sid">The 'connect_sid' cookie</param>
+        /// <param name="remember_me">The 'remember_me' cookie (not required)</param>
+        /// <returns>This <see cref="PonyTownClient"/> instance</returns>
+        public PonyTownClient LoginWithCookie(string connect_sid, string? remember_me = null)
         {
-            _cookieContainer.Add(new Uri("https://pony.town"), new Cookie("connect.sid", connect_sid));
+            Uri hostUri = new Uri("https://pony.town");
+            _cookieContainer.Add(hostUri, new Cookie("connect.sid", connect_sid));
+            if(remember_me != null)
+                _cookieContainer.Add(hostUri, new Cookie("remember_me", remember_me));
             return this;
         }
 
