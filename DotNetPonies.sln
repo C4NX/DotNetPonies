@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetPonies", "DotNetPonies\DotNetPonies.csproj", "{7C09D43F-636F-4FAA-970B-8D4F6E715E91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetPonies.Test", "DotNetPonies.Test\DotNetPonies.Test.csproj", "{998850AC-710E-4FD1-AB99-5955981DBF89}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7C09D43F-636F-4FAA-970B-8D4F6E715E91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C09D43F-636F-4FAA-970B-8D4F6E715E91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C09D43F-636F-4FAA-970B-8D4F6E715E91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C09D43F-636F-4FAA-970B-8D4F6E715E91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{998850AC-710E-4FD1-AB99-5955981DBF89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{998850AC-710E-4FD1-AB99-5955981DBF89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{998850AC-710E-4FD1-AB99-5955981DBF89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{998850AC-710E-4FD1-AB99-5955981DBF89}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0E7D9F4D-2E16-4105-9B82-0857E892426D}
+	EndGlobalSection
+EndGlobal
