@@ -5,27 +5,74 @@ using System.Text;
 
 namespace DotNetPonies
 {
+    /// <summary>
+    /// A class about the current game informations, it contains servers list, event message, version, ect...
+    /// </summary>
     public class GameStatus
     {
-        public string? Version { get; internal set; }
+        /// <summary>
+        /// Get the game version
+        /// </summary>
+        public string? Version { get; private set; }
+        /// <summary>
+        /// Get a readonly collection of <see cref="ServerStatus"/>
+        /// </summary>
         public IReadOnlyCollection<ServerStatus> Servers { get; private set; }
 
-        public string? Event { get;internal set; }
-        public string? InfoMessage { get; internal set; }
-        public string? InfoMessageDismissableMessage { get; internal set; }
-        public uint? InfoMessageDismissableTime { get; internal set; }
+        /// <summary>
+        /// Get the current event name or null if no event is currently taking place.
+        /// </summary>
+        public string? Event { get; private set; }
 
-        public bool MaintenanceMode { get; internal set; }
-        public bool Twitter { get; internal set; }
-        public bool UpdateMode { get; internal set; }
-        public bool VisitPt { get; internal set; }
-        public bool EnableBoosty { get; internal set; }
+        /// <summary>
+        /// Get the 'infoMessage' string value.
+        /// </summary>
+        public string? InfoMessage { get; private set; }
+        /// <summary>
+        /// Get the 'infoMessageDismissable.message' value
+        /// </summary>
+        public string? InfoMessageDismissableMessage { get; private set; }
+        /// <summary>
+        /// Get the 'infoMessageDismissable.time' value
+        /// </summary>
+        public uint? InfoMessageDismissableTime { get; private set; }
 
-        public GameStatus() 
+        /// <summary>
+        /// Return a boolean that indicate if the game is under maintenance.
+        /// </summary>
+        public bool MaintenanceMode { get; private set; }
+
+        /// <summary>
+        /// Get the 'twitter' value
+        /// </summary>
+        public bool Twitter { get; private set; }
+
+        /// <summary>
+        /// Get the 'updateMode' value
+        /// </summary>
+        public bool UpdateMode { get; private set; }
+
+        /// <summary>
+        /// Get the 'visitPt' value
+        /// </summary>
+        public bool VisitPt { get; private set; }
+
+        /// <summary>
+        /// Get the 'enableBoosty' value
+        /// </summary>
+        public bool EnableBoosty { get; private set; }
+
+        internal GameStatus() 
         { 
             Servers = new List<ServerStatus>();
         }
 
+        /// <summary>
+        /// Read a <see cref="GameStatus"/> from an array of <see cref="byte"/>
+        /// </summary>
+        /// <param name="data"></param>
+        /// <exception cref="EndOfStreamException">An error has occurred while reading one of the values, or the data provided is not valid.</exception>
+        /// <returns>A <see cref="GameStatus"/> object.</returns>
         public static GameStatus FromData(byte[] data)
         {
             GameStatus gameStatus = new GameStatus();
@@ -55,11 +102,11 @@ namespace DotNetPonies
                         gameStatus.InfoMessageDismissableTime = reader.ReadUInt32();
                     }
 
-                    gameStatus.MaintenanceMode = IsBit(gameBits, 2);
-                    gameStatus.Twitter = IsBit(gameBits, 4);
-                    gameStatus.UpdateMode = IsBit(gameBits, 1);
-                    gameStatus.VisitPt = IsBit(gameBits, 16);
-                    gameStatus.EnableBoosty = IsBit(gameBits, 256);
+                    gameStatus.MaintenanceMode = AndBit(gameBits, 2);
+                    gameStatus.Twitter = AndBit(gameBits, 4);
+                    gameStatus.UpdateMode = AndBit(gameBits, 1);
+                    gameStatus.VisitPt = AndBit(gameBits, 16);
+                    gameStatus.EnableBoosty = AndBit(gameBits, 256);
 
                     byte serverCount = reader.ReadByte();
                     for (int i = 0; i < serverCount; i++)
@@ -75,7 +122,7 @@ namespace DotNetPonies
                             percistantNotif = reader.ReadString();
 
                         int onlineCount = 52340 ^ reader.ReadUInt16();
-                        serverList.Add(new ServerStatus(id, onlineCount, IsBit(serverBits, 1), IsBit(serverBits, 2), percistantNotif));
+                        serverList.Add(new ServerStatus(id, onlineCount, AndBit(serverBits, 1), AndBit(serverBits, 2), percistantNotif));
                     }
 
                     gameStatus.Servers = serverList.AsReadOnly();
@@ -85,7 +132,7 @@ namespace DotNetPonies
             return gameStatus;
         }
 
-        private static bool IsBit(int t, int n)
+        private static bool AndBit(int t, int n)
             => (t & n) == n;
     }
 }
