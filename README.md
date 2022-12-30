@@ -17,7 +17,7 @@ var status = await client.GetStatus();
 status.Version // The pony town game version
 status.Servers // All the servers status (name, online)
 status.Servers[.].Id // Server ID
-status.Servers[.].COunt // Player count
+status.Servers[.].Count // Player count
 ```
 
 ## Issues
