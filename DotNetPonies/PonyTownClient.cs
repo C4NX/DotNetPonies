@@ -110,7 +110,7 @@ namespace DotNetPonies
             }
         }
 
-        public void CheckForJsonError(string data)
+        private void CheckForJsonError(string data)
         {
             if (data.Length > 0 && data[0] == '{')
                 throw new PonyTownException(JsonConvert.DeserializeObject<ErrorModel>(data)?.Error ?? "No error message provided");
