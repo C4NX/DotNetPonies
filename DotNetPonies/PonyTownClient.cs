@@ -34,6 +34,11 @@ namespace DotNetPonies
         public const string Api2Endpoint = "https://pony.town/api2/";
 
         /// <summary>
+        /// ApiV1 Endpoint 
+        /// </summary>
+        public const string Api1Endpoint = "https://pony.town/api/";
+
+        /// <summary>
         /// Create 
         /// </summary>
         /// <param name="apiVersion"></param>
@@ -94,7 +99,7 @@ namespace DotNetPonies
         /// <exception cref="PonyTownForbiddenException">Response is forbidden</exception>
         public async Task<IReadOnlyCollection<Pony>?> GetCharactersAsync(string accountId, string accountName)
         {
-            using (var resp = await _httpClient.PostAsync("https://pony.town/api/account-characters",
+            using (var resp = await _httpClient.PostAsync($"{Api1Endpoint}account-characters",
                 new FormUrlEncodedContent(new Dictionary<string, string>() { { "accountId", accountId }, { "accountName", accountName } })))
             {
                 if (resp.StatusCode == HttpStatusCode.Forbidden)
