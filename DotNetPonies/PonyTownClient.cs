@@ -85,11 +85,22 @@ namespace DotNetPonies
             return this;
         }
 
+        /// <summary>
+        /// Get a <see cref="IReadOnlyCollection{T}"/> of <see cref="Pony"/> owned by a player.
+        /// </summary>
+        /// <param name="accountId">The player account id</param>
+        /// <param name="accountName">The player account name</param>
+        /// <returns>A <see cref="IReadOnlyCollection{T}"/> of <see cref="Pony"/></returns>
+        /// <exception cref="PonyTownForbiddenException">Response is forbidden</exception>
         public async Task<IReadOnlyCollection<Pony>?> GetCharactersAsync(string accountId, string accountName)
         {
             using (var resp = await _httpClient.PostAsync("https://pony.town/api/account-characters",
                 new FormUrlEncodedContent(new Dictionary<string, string>() { { "accountId", accountId }, { "accountName", accountName } })))
             {
+                if (resp.StatusCode == HttpStatusCode.Forbidden)
+                    throw new PonyTownForbiddenException();
+
+                resp.EnsureSuccessStatusCode();
                 return JsonConvert.DeserializeObject<ReadOnlyCollection<Pony>>(await resp.Content.ReadAsStringAsync());
             }
         }

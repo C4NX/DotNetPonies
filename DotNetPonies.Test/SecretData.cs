@@ -27,11 +27,14 @@ namespace DotNetPonies.Test
             return this;
         }
 
-        public string GetSecret(string key, string? _default = null)
+        public string? GetSecret(string key, string? _default = null)
         {
             if(_data.ContainsKey(key))
                 return _data[key];
-            return _default ?? string.Empty;
+            return _default;
         }
+
+        public string GetSecretNotNull(string key, string? _default = null)
+            => GetSecret(key, _default) ?? string.Empty;
     }
 }
