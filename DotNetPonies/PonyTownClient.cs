@@ -34,6 +34,11 @@ namespace DotNetPonies
         public const string Api2Endpoint = "https://pony.town/api2/";
 
         /// <summary>
+        /// ApiV1 Endpoint 
+        /// </summary>
+        public const string Api1Endpoint = "https://pony.town/api/";
+
+        /// <summary>
         /// Create 
         /// </summary>
         /// <param name="apiVersion"></param>
