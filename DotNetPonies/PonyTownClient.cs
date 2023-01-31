@@ -24,9 +24,9 @@ namespace DotNetPonies
         private CookieContainer _cookieContainer;
 
         /// <summary>
-        /// The api-version header, last updated 30/12/2022
+        /// The api-version header, last updated 31/01/2023
         /// </summary>
-        public const string ApiVersion = "1gL2q7BKYG";
+        public const string ApiVersion = "cHMqbcVtri";
         
         /// <summary>
         /// ApiV2 Endpoint 
