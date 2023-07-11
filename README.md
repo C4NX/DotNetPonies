@@ -1,26 +1,62 @@
 <div align="center">
-    <img src="images/logo.png">
+    <img src="images/logo.png" alt="DNP Logo"/>
     <p>A DotNet Standard C# <a href="https://pony.town/">PonyTown</a> API Wrapper</p>
 </div>
 
 
 ## Getting Started
-- Install the library from [Nuget](#) or this repository
+- Install the library from [Nuget](https://nuget.org/packages/DotNetPonies) or this repository
 
-- Retrieving the servers status
+## Features
+
+- [x] Get the servers list and status
+- [ ] Get the account informations
+- [x] Get the account ponies
+- [ ] Pony data parsing
+- [ ] OAuth2 support
+- [ ] Friends list
+- [ ] Simple bot implementation
+
+## How to ?
+
+- Get the servers list
 ```csharp
 using DotNetPonies;
 
 var client = new PonyTownClient();
-var status = await client.GetStatus();
 
-status.Version // The pony town game version
-status.Servers // All the servers status (name, online)
-status.Servers[.].Id // Server ID
-status.Servers[.].Count // Player count
+// Resolve api version by searching in the pony town javascript code.
+await client.ResolveApiVersion();
+
+var status = await client.GetStatusAsync();
+
+foreach (var server in status.Servers)
+{
+    Console.WriteLine($"{server.Id} - {server.Name} - {server.OnlineCount} players");
+}
 ```
 
-## Issues
+- Get all pony for an account
+```csharp
+using DotNetPonies;
+
+var client = new PonyTownClient();
+
+// Resolve api version by searching in the pony town javascript code.
+await client.ResolveApiVersion();
+
+// Login with your pony town account (cookie)
+client.LoginWithCookie("<connect_sid>", "<remember_me>");
+
+var ponies = await client.GetCharactersAsync("<account_id>", "<account_name>");
+
+foreach (var pony in ponies)
+{
+    Console.WriteLine(pony.Name);
+}
+```
+
+## Get api version manually
 
 ###  PonyTownException: Invalid game version
 

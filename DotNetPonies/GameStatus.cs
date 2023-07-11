@@ -6,18 +6,14 @@ using System.Text;
 namespace DotNetPonies
 {
     /// <summary>
-    /// A class about the current game informations, it contains servers list, event message, version, ect...
+    /// A class about the current game information, it contains servers list, event message, version, ect...
     /// </summary>
     public class GameStatus
     {
         /// <summary>
-        /// Get the game version
-        /// </summary>
-        public string? Version { get; private set; }
-        /// <summary>
         /// Get a readonly collection of <see cref="ServerStatus"/>
         /// </summary>
-        public IReadOnlyCollection<ServerStatus> Servers { get; private set; }
+        public IReadOnlyCollection<ServerStatus> Servers { get; private set; } = new List<ServerStatus>();
 
         /// <summary>
         /// Get the current event name or null if no event is currently taking place.
@@ -28,10 +24,12 @@ namespace DotNetPonies
         /// Get the 'infoMessage' string value.
         /// </summary>
         public string? InfoMessage { get; private set; }
+
         /// <summary>
         /// Get the 'infoMessageDismissable.message' value
         /// </summary>
         public string? InfoMessageDismissableMessage { get; private set; }
+
         /// <summary>
         /// Get the 'infoMessageDismissable.time' value
         /// </summary>
@@ -62,10 +60,15 @@ namespace DotNetPonies
         /// </summary>
         public bool EnableBoosty { get; private set; }
 
-        internal GameStatus() 
-        { 
-            Servers = new List<ServerStatus>();
-        }
+        /// <summary>
+        /// Get the 'inAppRollout' value
+        /// </summary>
+        public bool InAppRollout { get; private set; }
+
+        /// <summary>
+        /// Get the 'criticalTwitterWarning' value
+        /// </summary>
+        public bool CriticalTwitterWarning { get; private set; }
 
         /// <summary>
         /// Read a <see cref="GameStatus"/> from an array of <see cref="byte"/>
@@ -75,64 +78,72 @@ namespace DotNetPonies
         /// <returns>A <see cref="GameStatus"/> object.</returns>
         public static GameStatus FromData(byte[] data)
         {
-            GameStatus gameStatus = new GameStatus();
-            using (MemoryStream memoryStream = new MemoryStream(data))
+            GameStatus gameStatus;
+            using MemoryStream memoryStream = new MemoryStream(data);
+            using BinaryReader reader = new BinaryReader(memoryStream);
+            
+            var serverList = new List<ServerStatus>();
+
+            //_4n: readUInt16
+            //n5n: readString
+            //i5n: readByte
+            //Q4n: readByte / ReadBoolean
+                    
+            var statusBit = reader.ReadUInt16() ^ 244;
+            var serversCount = reader.ReadByte();
+            for (var i = 0; i < serversCount; i++)
             {
-                using (BinaryReader reader = new BinaryReader(memoryStream))
-                {
-                    List<ServerStatus> serverList = new List<ServerStatus>();
-                    string versionString = reader.ReadString();
-                    var gameBits = 179 ^ reader.ReadUInt16();
-
-                    // event
-                    if((8 & gameBits) > 0)
-                        gameStatus.Event = reader.ReadString();
-                    // infoMessage
-                    if ((32 & gameBits) > 0)
-                        gameStatus.InfoMessage = reader.ReadString();
-
-                    // skip inAppRollout
-                    if ((64 & gameBits) > 0)
-                        memoryStream.Position++;
-
-                    // infoMessageDismissable
-                    if ((128 & gameBits) > 0)
-                    {
-                        gameStatus.InfoMessageDismissableMessage = reader.ReadString();
-                        gameStatus.InfoMessageDismissableTime = reader.ReadUInt32();
-                    }
-
-                    gameStatus.MaintenanceMode = AndBit(gameBits, 2);
-                    gameStatus.Twitter = AndBit(gameBits, 4);
-                    gameStatus.UpdateMode = AndBit(gameBits, 1);
-                    gameStatus.VisitPt = AndBit(gameBits, 16);
-                    gameStatus.EnableBoosty = AndBit(gameBits, 256);
-
-                    byte serverCount = reader.ReadByte();
-                    for (int i = 0; i < serverCount; i++)
-                    {
-                        string id = reader.ReadString();
-                        string? percistantNotif = null;
-
-                        // read the offline, restrict byte
-                        int serverBits = 54 ^ reader.ReadByte();
-
-                        // untested, 4 & serverBits && (o = FQn(t))
-                        if ((serverBits & 4) > 0) // hasPercistantNotificationText
-                            percistantNotif = reader.ReadString();
-
-                        int onlineCount = 52340 ^ reader.ReadUInt16();
-                        serverList.Add(new ServerStatus(id, onlineCount, AndBit(serverBits, 1), AndBit(serverBits, 2), percistantNotif));
-                    }
-
-                    gameStatus.Servers = serverList.AsReadOnly();
-                    gameStatus.Version = versionString;
-                }
+                var serverId = reader.ReadString();
+                var offlineAndRestrictAndNotification = reader.ReadByte() ^ 113;
+                var offline = AndBit(offlineAndRestrictAndNotification, 1);
+                var restrict = AndBit(offlineAndRestrictAndNotification, 2);
+                var online = reader.ReadUInt16() ^ 34867;
+                string? notification = null;
+                if (AndBit(offlineAndRestrictAndNotification, 4)) notification = reader.ReadString();
+                        
+                serverList.Add(new ServerStatus(serverId, online, offline, restrict, notification));
             }
+
+            string? _event = null;
+            string? infoMessage = null;
+            bool inAppRollout = false;
+            string? infoMessageDismissableMessage = null;
+            uint? infoMessageDismissableTime = null;
+            if (AndBit(statusBit, 8)) _event = reader.ReadString();
+            if (AndBit(statusBit, 32)) infoMessage = reader.ReadString();
+            if (AndBit(statusBit, 64)) inAppRollout = reader.ReadBoolean();
+            if (AndBit(statusBit, 128))
+            {
+                infoMessageDismissableMessage = reader.ReadString();
+                infoMessageDismissableTime = reader.ReadUInt32();
+            }
+
+            bool maintenanceMode = AndBit(statusBit, 2);
+            bool twitter = AndBit(statusBit, 4);
+            bool updateMode = AndBit(statusBit, 1);
+            bool visitPt = AndBit(statusBit, 16);
+            bool enableBoosty = AndBit(statusBit, 256);
+            bool criticalTwitterWarning = AndBit(statusBit, 512);
+
+            gameStatus = new GameStatus
+            {
+                MaintenanceMode = maintenanceMode,
+                Twitter = twitter,
+                UpdateMode = updateMode,
+                VisitPt = visitPt,
+                EnableBoosty = enableBoosty,
+                CriticalTwitterWarning = criticalTwitterWarning,
+                InfoMessage = infoMessage,
+                InfoMessageDismissableMessage = infoMessageDismissableMessage,
+                InfoMessageDismissableTime = infoMessageDismissableTime,
+                Event = _event,
+                Servers = serverList,
+                InAppRollout = inAppRollout
+            };
+
             return gameStatus;
         }
 
-        private static bool AndBit(int t, int n)
-            => (t & n) == n;
+        private static bool AndBit(int t, int n) => (t & n) == n;
     }
 }

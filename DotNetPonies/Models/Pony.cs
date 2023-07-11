@@ -1,7 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DotNetPonies.Models
 {
@@ -52,7 +50,6 @@ namespace DotNetPonies.Models
         /// </summary>
         [JsonProperty("supporterTag")]
         public int SupporterTag { get; private set; }
-
         
         public override string ToString()
             => $"{Id ?? "No Id"} {Name ?? "No Name"}";

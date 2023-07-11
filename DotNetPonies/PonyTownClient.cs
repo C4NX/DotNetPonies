@@ -11,38 +11,62 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace DotNetPonies
 {
     /// <summary>
-    /// The non-official wrapper for Pony Town API.
+    /// The non-official <c>PonyTown API Client</c> for .NET<br />
+    /// <code>
+    ///     var client = new PonyTownClient();
+    ///     await client.ResolveApiVersionAsync();
+    ///     var gameStatus = await client.GetStatusAsync();
+    /// </code>
     /// </summary>
     public class PonyTownClient
     {
-        private HttpClient _httpClient;
-        private CookieContainer _cookieContainer;
+        private readonly HttpClient _httpClient;
+        private readonly CookieContainer _cookieContainer;
 
         /// <summary>
-        /// The api-version header, last updated 31/01/2023
+        /// The Api Version Header Name (api-version)
         /// </summary>
-        public const string ApiVersion = "cHMqbcVtri";
-        
+        public const string ApiVersionHeaderName = "api-version";
+
         /// <summary>
-        /// ApiV2 Endpoint 
+        /// The PonyTown Base Url (https://pony.town/)
+        /// </summary>
+        public const string PonyTownBaseUrl = "https://pony.town/";
+
+        /// <summary>
+        /// ApiV2 Endpoint (https://pony.town/api2/)
         /// </summary>
         public const string Api2Endpoint = "https://pony.town/api2/";
 
         /// <summary>
-        /// ApiV1 Endpoint 
+        /// ApiV1 Endpoint (https://pony.town/api/)
         /// </summary>
         public const string Api1Endpoint = "https://pony.town/api/";
+
+        /// <summary>
+        /// Get or Set the Api Version Header (required to successfully call the API)<br/>To resolve the ApiVersion, use <see cref="ResolveApiVersionAsync"/>
+        /// </summary>
+        public string ApiVersionHeader
+        {
+            get => string.Join(",", _httpClient.DefaultRequestHeaders.GetValues(ApiVersionHeaderName));
+            set
+            {
+                _httpClient.DefaultRequestHeaders.Remove(ApiVersionHeaderName);
+                _httpClient.DefaultRequestHeaders.Add(ApiVersionHeaderName, value);
+            }
+        }
 
         /// <summary>
         /// Create 
         /// </summary>
         /// <param name="apiVersion"></param>
-        public PonyTownClient(string apiVersion = ApiVersion) : this(new StandardHttpClient(), apiVersion)
+        public PonyTownClient(string? apiVersion = null) : this(new StandardHttpClient(), apiVersion)
         {
         }
 
@@ -51,28 +75,22 @@ namespace DotNetPonies
         /// </summary>
         /// <param name="httpClient">The <see cref="IHttpClient"/> to use or null</param>
         /// <param name="apiVersion">The apiVersion to use</param>
-        public PonyTownClient(IHttpClient httpClient, string apiVersion = ApiVersion)
+        public PonyTownClient(IHttpClient httpClient, string? apiVersion = null)
         {
             _httpClient = httpClient.GetClient();
             _cookieContainer = httpClient.GetCookieContainer();
-            
-            _httpClient.DefaultRequestHeaders.Add("api-version", apiVersion);
-            _httpClient.DefaultRequestHeaders.Add("origin", "https://pony.town");
-            _httpClient.DefaultRequestHeaders.Add("referer", "https://pony.town");
+            if (apiVersion != null) ApiVersionHeader = apiVersion;
         }
 
         /// <summary>
-        /// Get a <see cref="GameStatus"/> object that represents the status of the current game, it contains all the available servers, game version and others...
+        /// Get a <see cref="GameStatus"/> object that represents the game status with servers, messages, etc...
         /// </summary>
-        /// <returns>The <see cref="GameStatus"/> object.</returns>
+        /// <exception cref="PonyTownException">Response is not successful</exception>
+        /// <returns>The loaded <see cref="GameStatus"/> object</returns>
         public async Task<GameStatus> GetStatusAsync()
         {
-            using (var response = await _httpClient.GetAsync($"{Api2Endpoint}game/status"))
-            {
-                string stringData = await response.Content.ReadAsStringAsync();
-                CheckForJsonError(stringData);
-                return GameStatus.FromData(Convert.FromBase64String(stringData));
-            }
+            using var response = await _httpClient.GetAsync($"{Api2Endpoint}game/status");
+            return GameStatus.FromData(Convert.FromBase64String(await GetResponseOrThrowException(response)));
         }
 
         /// <summary>
@@ -83,10 +101,9 @@ namespace DotNetPonies
         /// <returns>This <see cref="PonyTownClient"/> instance</returns>
         public PonyTownClient LoginWithCookie(string connect_sid, string? remember_me = null)
         {
-            Uri hostUri = new Uri("https://pony.town");
+            Uri hostUri = new Uri(PonyTownBaseUrl);
             _cookieContainer.Add(hostUri, new Cookie("connect.sid", connect_sid));
-            if(remember_me != null)
-                _cookieContainer.Add(hostUri, new Cookie("remember_me", remember_me));
+            if (remember_me != null) _cookieContainer.Add(hostUri, new Cookie("remember_me", remember_me));
             return this;
         }
 
@@ -99,21 +116,34 @@ namespace DotNetPonies
         /// <exception cref="PonyTownForbiddenException">Response is forbidden</exception>
         public async Task<IReadOnlyCollection<Pony>?> GetCharactersAsync(string accountId, string accountName)
         {
-            using (var resp = await _httpClient.PostAsync($"{Api1Endpoint}account-characters",
-                new FormUrlEncodedContent(new Dictionary<string, string>() { { "accountId", accountId }, { "accountName", accountName } })))
-            {
-                if (resp.StatusCode == HttpStatusCode.Forbidden)
-                    throw new PonyTownForbiddenException();
-
-                resp.EnsureSuccessStatusCode();
-                return JsonConvert.DeserializeObject<ReadOnlyCollection<Pony>>(await resp.Content.ReadAsStringAsync());
-            }
+            using var resp = await _httpClient.PostAsync($"{Api1Endpoint}account-characters",
+                new FormUrlEncodedContent(new Dictionary<string, string>()
+                {
+                    { "accountId", accountId }, { "accountName", accountName }
+                }));
+            if (resp.StatusCode == HttpStatusCode.Forbidden) throw new PonyTownForbiddenException();
+            resp.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<ReadOnlyCollection<Pony>>(await resp.Content.ReadAsStringAsync());
         }
 
-        private void CheckForJsonError(string data)
+        public async Task ResolveApiVersionAsync()
         {
-            if (data.Length > 0 && data[0] == '{')
-                throw new PonyTownException(JsonConvert.DeserializeObject<ErrorModel>(data)?.Error ?? "No error message provided");
+            const string regexQuery = "const Ew=\"([^\"]*)";
+            using var responseMessage =
+                await _httpClient.GetAsync($"{PonyTownBaseUrl}assets/scripts/bootstrap-7052b2bb32.js");
+            var responseString = await responseMessage.Content.ReadAsStringAsync();
+            var match = Regex.Match(responseString, regexQuery);
+            if (match.Success) ApiVersionHeader = match.ToString()[(match.ToString().IndexOf('"') + 1)..];
+            else throw new PonyTownException("Could not resolve api version");
+        }
+        
+        private async Task<string> GetResponseOrThrowException(HttpResponseMessage response)
+        {
+            var stringData = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                throw new PonyTownException(JsonConvert.DeserializeObject<ErrorModel>(stringData)?.Error ??
+                                            "No error message provided");
+            return stringData;
         }
     }
 }

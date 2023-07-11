@@ -10,10 +10,10 @@ namespace DotNetPonies.Test
         {
             // https://pony.town/api2/game/status
             var client = new PonyTownClient();
+            await client.ResolveApiVersionAsync();
             var status = await client.GetStatusAsync();
 
             Assert.IsNotNull(status, "Version is null");
-            Assert.AreNotEqual(status.Version, string.Empty, "Version is empty");
 
             Assert.IsTrue(status.Servers.Count > 0, "No server was found.");
         }
