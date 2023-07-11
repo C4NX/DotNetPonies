@@ -26,7 +26,7 @@ using DotNetPonies;
 var client = new PonyTownClient();
 
 // Resolve api version by searching in the pony town javascript code.
-await client.ResolveApiVersion();
+await client.ResolveApiVersionAsync();
 
 var status = await client.GetStatusAsync();
 
@@ -43,7 +43,7 @@ using DotNetPonies;
 var client = new PonyTownClient();
 
 // Resolve api version by searching in the pony town javascript code.
-await client.ResolveApiVersion();
+await client.ResolveApiVersionAsync();
 
 // Login with your pony town account (cookie)
 client.LoginWithCookie("<connect_sid>", "<remember_me>");
