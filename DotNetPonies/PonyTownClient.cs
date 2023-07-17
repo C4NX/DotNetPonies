@@ -28,7 +28,8 @@ namespace DotNetPonies
     {
         private readonly HttpClient _httpClient;
         private readonly CookieContainer _cookieContainer;
-
+        private readonly PonyTownScope _scope;
+        
         /// <summary>
         /// The Api Version Header Name (api-version)
         /// </summary>
@@ -66,7 +67,7 @@ namespace DotNetPonies
         /// Create 
         /// </summary>
         /// <param name="apiVersion"></param>
-        public PonyTownClient(string? apiVersion = null) : this(new StandardHttpClient(), apiVersion)
+        public PonyTownClient(PonyTownScope? ponyTownScope = null) : this(new StandardHttpClient(), ponyTownScope)
         {
         }
 
@@ -75,22 +76,12 @@ namespace DotNetPonies
         /// </summary>
         /// <param name="httpClient">The <see cref="IHttpClient"/> to use or null</param>
         /// <param name="apiVersion">The apiVersion to use</param>
-        public PonyTownClient(IHttpClient httpClient, string? apiVersion = null)
+        public PonyTownClient(IHttpClient httpClient, PonyTownScope? ponyTownScope = null)
         {
             _httpClient = httpClient.GetClient();
             _cookieContainer = httpClient.GetCookieContainer();
-            if (apiVersion != null) ApiVersionHeader = apiVersion;
-        }
-
-        /// <summary>
-        /// Get a <see cref="GameStatus"/> object that represents the game status with servers, messages, etc...
-        /// </summary>
-        /// <exception cref="PonyTownException">Response is not successful</exception>
-        /// <returns>The loaded <see cref="GameStatus"/> object</returns>
-        public async Task<GameStatus> GetStatusAsync()
-        {
-            using var response = await _httpClient.GetAsync($"{Api2Endpoint}game/status");
-            return GameStatus.FromData(Convert.FromBase64String(await GetResponseOrThrowException(response)));
+            _scope = ponyTownScope ?? new PonyTownScope();
+            if (_scope.DefaultApiVersion != null) ApiVersionHeader = _scope.DefaultApiVersion;
         }
 
         /// <summary>
@@ -105,6 +96,17 @@ namespace DotNetPonies
             _cookieContainer.Add(hostUri, new Cookie("connect.sid", connect_sid));
             if (remember_me != null) _cookieContainer.Add(hostUri, new Cookie("remember_me", remember_me));
             return this;
+        }
+
+        /// <summary>
+        /// Get a <see cref="OfflineGameStatus"/> object that represents the game status with servers, messages, etc...
+        /// </summary>
+        /// <exception cref="PonyTownException">Response is not successful</exception>
+        /// <returns>The loaded <see cref="OfflineGameStatus"/> object</returns>
+        public async Task<OfflineGameStatus> GetStatusAsync()
+        {
+            using var response = await _httpClient.GetAsync($"{Api2Endpoint}game/status");
+            return OfflineGameStatus.FromData(Convert.FromBase64String(await GetResponseOrThrowException(response)), _scope);
         }
 
         /// <summary>
@@ -126,17 +128,24 @@ namespace DotNetPonies
             return JsonConvert.DeserializeObject<ReadOnlyCollection<Pony>>(await resp.Content.ReadAsStringAsync());
         }
 
+        /// <summary>
+        /// Try to resolve the Api Version Header by getting the bootstrap javascript file and searching for the api version.
+        /// </summary>
+        /// <exception cref="PonyTownException">Could not resolve bootstrap javascript file or api version in it</exception>
         public async Task ResolveApiVersionAsync()
         {
-            const string regexQuery = "const Ew=\"([^\"]*)";
-            using var responseMessage =
-                await _httpClient.GetAsync($"{PonyTownBaseUrl}assets/scripts/bootstrap-7052b2bb32.js");
+            const string regexBootstrap = "/assets/scripts/bootstrap-([a-z0-9]*)\\.js";
+            using var mainResponseMessage = await _httpClient.GetAsync(PonyTownBaseUrl);
+            var mainResponseString = await mainResponseMessage.Content.ReadAsStringAsync();
+            var bootstrapMatch = Regex.Match(mainResponseString, regexBootstrap);
+            if (!bootstrapMatch.Success) throw new PonyTownException("Could not resolve bootstrap javascript file");
+            using var responseMessage = await _httpClient.GetAsync(PonyTownBaseUrl + bootstrapMatch);
             var responseString = await responseMessage.Content.ReadAsStringAsync();
-            var match = Regex.Match(responseString, regexQuery);
+            var match = Regex.Match(responseString, _scope.RegexApiVersion);
             if (match.Success) ApiVersionHeader = match.ToString()[(match.ToString().IndexOf('"') + 1)..];
             else throw new PonyTownException("Could not resolve api version");
         }
-        
+
         private async Task<string> GetResponseOrThrowException(HttpResponseMessage response)
         {
             var stringData = await response.Content.ReadAsStringAsync();

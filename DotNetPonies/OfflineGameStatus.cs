@@ -8,7 +8,7 @@ namespace DotNetPonies
     /// <summary>
     /// A class about the current game information, it contains servers list, event message, version, ect...
     /// </summary>
-    public class GameStatus
+    public class OfflineGameStatus
     {
         /// <summary>
         /// Get a readonly collection of <see cref="ServerStatus"/>
@@ -36,19 +36,9 @@ namespace DotNetPonies
         public uint? InfoMessageDismissableTime { get; private set; }
 
         /// <summary>
-        /// Return a boolean that indicate if the game is under maintenance.
-        /// </summary>
-        public bool MaintenanceMode { get; private set; }
-
-        /// <summary>
         /// Get the 'twitter' value
         /// </summary>
         public bool Twitter { get; private set; }
-
-        /// <summary>
-        /// Get the 'updateMode' value
-        /// </summary>
-        public bool UpdateMode { get; private set; }
 
         /// <summary>
         /// Get the 'visitPt' value
@@ -70,66 +60,62 @@ namespace DotNetPonies
         /// </summary>
         public bool CriticalTwitterWarning { get; private set; }
 
+        public string? RestartNotificationJson { get; private set; }
+
         /// <summary>
-        /// Read a <see cref="GameStatus"/> from an array of <see cref="byte"/>
+        /// Read a <see cref="OfflineGameStatus"/> from an array of <see cref="byte"/>
         /// </summary>
         /// <param name="data"></param>
         /// <exception cref="EndOfStreamException">An error has occurred while reading one of the values, or the data provided is not valid.</exception>
-        /// <returns>A <see cref="GameStatus"/> object.</returns>
-        public static GameStatus FromData(byte[] data)
+        /// <returns>A <see cref="OfflineGameStatus"/> object.</returns>
+        public static OfflineGameStatus FromData(byte[] data, PonyTownScope scope)
         {
-            GameStatus gameStatus;
+            OfflineGameStatus offlineGameStatus;
             using MemoryStream memoryStream = new MemoryStream(data);
             using BinaryReader reader = new BinaryReader(memoryStream);
-            
             var serverList = new List<ServerStatus>();
-
-            //_4n: readUInt16
-            //n5n: readString
-            //i5n: readByte
-            //Q4n: readByte / ReadBoolean
-                    
-            var statusBit = reader.ReadUInt16() ^ 244;
+            var statusBit = reader.ReadUInt16() ^ scope.MagicStatusBit;
             var serversCount = reader.ReadByte();
             for (var i = 0; i < serversCount; i++)
             {
                 var serverId = reader.ReadString();
-                var offlineAndRestrictAndNotification = reader.ReadByte() ^ 113;
+                var offlineAndRestrictAndNotification = reader.ReadByte() ^ scope.MagicOfflineAndRestrictAndNotificationBit;
                 var offline = AndBit(offlineAndRestrictAndNotification, 1);
                 var restrict = AndBit(offlineAndRestrictAndNotification, 2);
-                var online = reader.ReadUInt16() ^ 34867;
+                var online = reader.ReadUInt16() ^ scope.MagicOnlineBit;
                 string? notification = null;
                 if (AndBit(offlineAndRestrictAndNotification, 4)) notification = reader.ReadString();
-                        
                 serverList.Add(new ServerStatus(serverId, online, offline, restrict, notification));
             }
 
+            // read meta data
+            
             string? _event = null;
             string? infoMessage = null;
             bool inAppRollout = false;
             string? infoMessageDismissableMessage = null;
             uint? infoMessageDismissableTime = null;
-            if (AndBit(statusBit, 8)) _event = reader.ReadString();
-            if (AndBit(statusBit, 32)) infoMessage = reader.ReadString();
-            if (AndBit(statusBit, 64)) inAppRollout = reader.ReadBoolean();
-            if (AndBit(statusBit, 128))
+            string? restartNotificationJson = null;
+            if (AndBit(statusBit, 1)) restartNotificationJson = reader.ReadString();
+            if (AndBit(statusBit, 4)) _event = reader.ReadString();
+            if (AndBit(statusBit, 16)) infoMessage = reader.ReadString();
+            if (AndBit(statusBit, 32)) inAppRollout = reader.ReadBoolean();
+            if (AndBit(statusBit, 64))
             {
                 infoMessageDismissableMessage = reader.ReadString();
                 infoMessageDismissableTime = reader.ReadUInt32();
             }
 
-            bool maintenanceMode = AndBit(statusBit, 2);
-            bool twitter = AndBit(statusBit, 4);
-            bool updateMode = AndBit(statusBit, 1);
-            bool visitPt = AndBit(statusBit, 16);
-            bool enableBoosty = AndBit(statusBit, 256);
-            bool criticalTwitterWarning = AndBit(statusBit, 512);
-
-            gameStatus = new GameStatus
+            // read boolean values
+            
+            bool twitter = AndBit(statusBit, 2);
+            bool visitPt = AndBit(statusBit, 8);
+            bool enableBoosty = AndBit(statusBit, 128);
+            bool criticalTwitterWarning = AndBit(statusBit, 256);
+            offlineGameStatus = new OfflineGameStatus
             {
-                MaintenanceMode = maintenanceMode,
+                RestartNotificationJson = restartNotificationJson,
                 Twitter = twitter,
-                UpdateMode = updateMode,
                 VisitPt = visitPt,
                 EnableBoosty = enableBoosty,
                 CriticalTwitterWarning = criticalTwitterWarning,
@@ -140,8 +126,7 @@ namespace DotNetPonies
                 Servers = serverList,
                 InAppRollout = inAppRollout
             };
-
-            return gameStatus;
+            return offlineGameStatus;
         }
 
         private static bool AndBit(int t, int n) => (t & n) == n;

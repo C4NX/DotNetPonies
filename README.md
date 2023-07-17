@@ -56,7 +56,7 @@ foreach (var pony in ponies)
 }
 ```
 
-## Get api version manually
+## Get Api Version manually
 
 ###  PonyTownException: Invalid game version
 

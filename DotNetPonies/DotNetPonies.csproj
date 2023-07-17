@@ -3,10 +3,24 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>1.0.2</Version>
+    <Title>DotNetPonies</Title>
+    <Description>A simple wrapper for the game PonyTown (WIP)</Description>
+    <PackageIcon>39029745.png</PackageIcon>
+    <RepositoryUrl>https://github.com/C4NX/DotNetPonies</RepositoryUrl>
+    <PackageTags>pony town</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="39029745.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
