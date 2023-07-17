@@ -32,7 +32,7 @@ var status = await client.GetStatusAsync();
 
 foreach (var server in status.Servers)
 {
-    Console.WriteLine($"{server.Id} - {server.Name} - {server.OnlineCount} players");
+    Console.WriteLine($"{server.Id} - {server.OnlineCount} players");
 }
 ```
 
@@ -72,5 +72,5 @@ PonyTown API V2 is using a **api-version** header to validate a lot of request, 
 - Get the **api-version** header
 - Create your client with this api version
 ```csharp
-var client = new PonyTownClient("<api-version-here>");
+var client = new PonyTownClient(new PonyTownScope { DefaultApiVersion = "<api-version>" });
 ```
